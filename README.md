@@ -1,0 +1,226 @@
+# Stampede AI - Crowd Detection System
+
+A real-time crowd detection and analytics system using YOLOv8 for object detection, FastAPI for the backend, and React for the frontend. The system can be deployed with Cloudflare Tunnel for public access.
+
+## Architecture
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   React UI      │────▶│  FastAPI        │────▶│  YOLOv8         │
+│   (Frontend)    │     │  Backend        │     │  Detection      │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+        │                       │
+        │                       ▼
+        │               ┌─────────────────┐
+        │               │  Cloudflare     │
+        │               │  Tunnel         │
+        │               └─────────────────┘
+        ▼
+┌─────────────────┐
+│  Firebase       │
+│  Hosting        │
+└─────────────────┘
+```
+
+## Project Structure
+
+```
+Stampede-AI/
+├── src/                      # React frontend
+│   ├── App.jsx              # Main application component
+│   ├── components/          # UI components
+│   │   ├── Analytics.jsx    # Analytics dashboard
+│   │   ├── CameraFeed.jsx   # Camera feed display
+│   │   ├── ControlPanel.jsx # Control panel
+│   │   ├── Sidebar.jsx      # Navigation sidebar
+│   │   └── ...
+│   ├── config/
+│   │   └── api.js           # API configuration
+│   └── services/
+│       └── storagePlaybackApi.js
+│
+├── backend/                 # FastAPI backend
+│   ├── main.py              # Main API server
+│   ├── storage_playback.py # Storage/playback service
+│   ├── requirements.txt    # Python dependencies
+│   └── yolov8n.pt           # YOLOv8 model weights
+│
+├── public/                  # Static assets
+├── dist/                    # Built frontend (Firebase deploy)
+├── .env                     # Environment variables
+├── d.ps1                    # Deployment script
+├── firebase.json            # Firebase configuration
+└── vite.config.js           # Vite configuration
+```
+
+## Features
+
+- **Real-time Detection**: YOLOv8-based crowd detection
+- **Multi-camera Support**: Up to 6 camera feeds
+- **Analytics Dashboard**: Live metrics and graphs
+- **Storage Playback**: Upload and playback recorded videos
+- **Delete Functionality**: Secure video deletion with PIN
+- **Backend Health Monitoring**: Automatic offline detection
+- **Email Alerts**: EmailJS integration for offline notifications
+- **Console Logging**: Structured logging for debugging
+
+## Prerequisites
+
+### Frontend
+- Node.js 18+
+- npm or yarn
+
+### Backend
+- Python 3.9+
+- CUDA-capable GPU (optional, for faster detection)
+
+### Deployment
+- Firebase CLI
+- Cloudflare Tunnel (cloudflared)
+
+## Setup
+
+### 1. Clone and Install Frontend Dependencies
+
+```bash
+cd Stampede-AI
+npm install
+```
+
+### 2. Set Up Backend
+
+```bash
+cd backend
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On Linux/Mac:
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 3. Configure Environment Variables
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```env
+VITE_API_URL=http://localhost:8000
+VITE_EMAILJS_SERVICE_ID=your_service_id
+VITE_EMAILJS_TEMPLATE_ID=your_template_id
+VITE_EMAILJS_PUBLIC_KEY=your_public_key
+```
+
+> **Note**: For Vite, environment variables must start with `VITE_` to be exposed to the frontend.
+
+## Running the Application
+
+### Development Mode
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+python main.py
+```
+
+**Terminal 2 - Frontend:**
+```bash
+npm run dev
+```
+
+Access the frontend at `http://localhost:5173`
+
+### Production Deployment
+
+Use the deployment script:
+
+```powershell
+.\d.ps1
+```
+
+This script will:
+1. Start the backend server
+2. Create a Cloudflare Tunnel
+3. Update `.env` with the public URL (preserving other variables)
+4. Build the frontend
+5. Deploy to Firebase Hosting
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check |
+| `/upload` | POST | Upload video |
+| `/status` | GET | Get feed status |
+| `/data` | GET | Get detection data |
+| `/analytics` | GET | Get analytics |
+| `/stream/{feed_id}` | GET | Get MJPEG stream |
+| `/delete/{video_id}` | DELETE | Delete video (PIN required) |
+
+## PIN Protection
+
+The delete endpoint is protected by a hardcoded 4-digit PIN:
+- Default PIN: `1234`
+
+To change, edit the PIN in `backend/main.py`:
+
+```python
+DELETE_PIN = "1234"  # Change this to your desired PIN
+```
+
+## Console Logging
+
+The system logs important events:
+
+**Backend:**
+- `[UPLOAD]` - Video received
+- `[PROCESSING STARTED]` - Processing began
+- `[PROCESSING DONE]` - Processing completed
+- `[DELETED]` - Video deleted
+
+**Frontend:**
+- Upload start/complete
+- Processing start
+- Delete success/failure
+- Backend status changes
+
+## Email Alerts
+
+When the backend goes offline, an email alert can be sent via EmailJS. This happens only once to prevent spam - the alert flag is stored in localStorage.
+
+To test EmailJS:
+1. Clear the flag: `localStorage.removeItem("backend_alert_sent")`
+2. Refresh the page or trigger offline detection
+
+## Technology Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, Vite, TailwindCSS |
+| Backend | FastAPI, Python |
+| ML | YOLOv8, OpenCV, PyTorch |
+| Deployment | Firebase Hosting, Cloudflare Tunnel |
+| Alerts | EmailJS |
+
+## Troubleshooting
+
+### CORS Errors
+Ensure the backend is running and Cloudflare Tunnel is properly configured.
+
+### EmailJS Not Working
+1. Clear the localStorage flag: `localStorage.removeItem("backend_alert_sent")`
+2. Rebuild after changing `.env` (Vite reads env vars at build time)
+3. Verify EmailJS credentials in your dashboard
+
+### Backend Not Starting
+- Check Python version: `python --version`
+- Verify all dependencies: `pip list`
+- Check port 8000 is not in use
+
+### Cloudflare Tunnel Error 530
+- Ensure the backend is running on localhost:8000
+- Check that cloudflared can reach the origin
+
+## License
+
+MIT
